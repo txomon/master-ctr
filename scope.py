@@ -1,30 +1,31 @@
+#!/usr/bin/python2
 from __future__ import print_function
+import sys
+sys.path.append('/usr/realtime/rtai-py/')
 import rtai
 import ctypes
 import time
 import numpy as np
 import matplotlib.pyplot as plt
 
+class scope_data(ctypes.Structure):
+	_fields_=[('time',ctypes.c_double),
+	('value',ctypes.c_double)]
+
 
 task = rtai.rt_task_init_schmod(rtai.nam2num("LAT2"),20,0,0,0,0XF)
-
 plt.axis([0,1000,0,1])
 plt.ion()
-i=0
-
-
 mbx_scope = rtai.rt_get_adr(rtai.nam2num("MBX3"))
-
 print(mbx_scope)
-scope=ctypes.c_double()
+scope=scope_data()
 
 while(True):
-	i=i+0.005
-	print("checkpoint")
 	rtai.rt_mbx_receive(mbx_scope, ctypes.byref(scope), ctypes.sizeof(scope))
-        print("checkpoint2")
+	time = float(scope.time)
 	value = float(scope.value)
-	plt.scatter(i,value)
+	print(time,value)
+	plt.scatter(time,value)
 	plt.draw()
 
  
