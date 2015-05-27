@@ -14,7 +14,6 @@ class scope_data_structure(ctypes.Structure):
         ('feedback', ctypes.c_double),
     ]
 
-
 task = rtai.rt_task_init_schmod(rtai.nam2num("LAT1"), 20, 0, 0, 0, 0XF)
 rtai.rt_make_soft_real_time()
 controller_output_mbx = rtai.rt_get_adr(rtai.nam2num("MBX1"))
@@ -34,8 +33,9 @@ while True:
     u = float(controller_output.value)
     y = 1.941 * y1 - 0.9418 * y2 + 2.451 * 0.000001 * u1 + 2.402 * 0.000001 * u2
     plant_feedback.value = y
-    scope_data.value = y
     scope_data.time = rtai.rt_get_cpu_time_ns() - initial_timestamp
+    scope_data.feedback = y
+    scope_data.control = u
     u1, u2, y1, y2 = u, u1, y, y1
     rtai.rt_mbx_send_if(plant_feedback_mbx,
                         ctypes.byref(plant_feedback),
@@ -43,7 +43,3 @@ while True:
     rtai.rt_mbx_send_if(scope_mbx,
                         ctypes.byref(scope_data),
                         ctypes.sizeof(scope_data))
-
-
-
-
