@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/env python
 from __future__ import print_function
 import sys
 
@@ -34,24 +34,18 @@ class scope_data_structure(ctypes.Structure):
         ('feedback', ctypes.c_double),
     ]
 
-
-setpoint.value = 1
-
-while (True):
-    rtai.rt_mbx_receive(scope_mbx, ctypes.byref(scope), ctypes.sizeof(scope))
-    time = float(scope.time)
-    control = float(scope.control)
-    feedback = float(scope.feedback)
+task = rtai.rt_task_init_schmod(rtai.nam2num("LAT2"), 20, 0, 0, 0, 0XF)
 
 class RtaiScope(object):
     def __init__(self):
         self.connections = []
-        self.task = rtai.rt_task_init_schmod(rtai.nam2num("LAT2"), 20, 0, 0, 0, 0XF)
         self.scope_mbx = rtai.rt_get_adr(rtai.nam2num("MBX3"))
         self.scope = scope_data_structure()
         self.setpoint_mbx = rtai.rt_get_adr(rtai.nam2num("MBX4"))
         self.setpoint = ctypes.c_double()
-        t = Timer(0.5, self.read_rtai)
+	logger.debug("Setting up timer for rtai functionality")
+        t = Timer(2, self.read_rtai)
+        t.start()
 
     def new_connection(self, con):
         self.connections.append(con)
@@ -60,27 +54,28 @@ class RtaiScope(object):
         self.connections.remove(con)
 
     def handle_request(self, con, msg):
-        logger.log("Received: " + repr(msg))
+        logger.debug("Received: " + repr(msg))
         if msg['type'] == 'setpoint':
             self.rtai_setpoint(msg['message'])
 
     def rtai_setpoint(self, setpoint):
-        if setpoint.value == setpoint:
+        if self.setpoint.value == setpoint:
             return
-        setpoint.valuea = setpoint
-        rtai.rt_mbx_send(self.setpoint_mbx, ctypes.byref(setpoint), ctypes.sizeof(setpoint))
+        self.setpoint.value = setpoint
+        rtai.rt_mbx_send(self.setpoint_mbx, ctypes.byref(self.setpoint), ctypes.sizeof(self.setpoint))
 
     def read_rtai(self):
         while True:
-            rtai.rt_mbx_receive(scope_mbx, ctypes.byref(scope), ctypes.sizeof(scope))
-            time = float(scope.time)
-            control = float(scope.control)
-            feedback = float(scope.feedback)
+            rtai.rt_mbx_receive(self.scope_mbx, ctypes.byref(self.scope), ctypes.sizeof(self.scope))
+            time = float(self.scope.time)
+            control = float(self.scope.control)
+            feedback = float(self.scope.feedback)
             data = {
                 "time": time,
                 "control": control,
                 "feedback": feedback,
             }
+            logger.debug("RTAI reported: "+ repr(data))
             for con in self.connections:
                 con.send('{"type": "data", "message":' + json.dumps(data) + '}')
 

@@ -30,7 +30,7 @@ setpoint.value = 0
 initial_timestamp = rtai.rt_get_cpu_time_ns()
 
 while True:
-	rtai.rt_mbx_receive_if(setpoint_mbx,
+    rtai.rt_mbx_receive_if(setpoint_mbx,
                            ctypes.byref(setpoint),
                            ctypes.sizeof(setpoint))
     rtai.rt_mbx_receive(controller_output_mbx,
