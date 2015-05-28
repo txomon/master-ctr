@@ -20,27 +20,27 @@ scope_mbx = rtai.rt_mbx_init(rtai.nam2num("MBX3"),ctypes.sizeof(salida))
 print(scope_mbx)
 dato = ctypes.c_double()
 data = ctypes.c_double()
-u1=0
-u2=0
-y1=0
-y2=0
+e1=0
+e2=0
+w1=0
+w2=0
 i=0
 
 while(True):
         i=i+0.005
 	rtai.rt_mbx_receive(control_reference, ctypes.byref(data), ctypes.sizeof(data))
-	u = float(data.value)
-        y = 1.941*y1-0.9418*y2+2.451*0.000001*u1+2.402*0.000001*u2
-	dato.value=y
-	salida.value = y
+	e = float(data.value)
+        w = 1.941*w1-0.9418*w2+2.451*0.000001*e1+2.402*0.000001*e2
+	dato.value=w
+	salida.value = w
 	salida.time = i
-	u1=u
-	u2=u1
-	y1=y
-	y2=y1
+	e1=e
+	e2=e1
+	w1=w
+	w2=w1
 	rtai.rt_mbx_send_if(plant_output, ctypes.byref(dato), ctypes.sizeof(dato))
 	rtai.rt_mbx_send_if(scope_mbx, ctypes.byref(salida), ctypes.sizeof(salida))
-
+        
 
 
 
