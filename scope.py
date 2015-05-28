@@ -30,15 +30,28 @@ logger = logging.getLogger()
 class scope_data_structure(ctypes.Structure):
     _fields_ = [
         ('time', ctypes.c_double),
-        ('control', ctypes.c_double),
+        ('setpoint', ctypes.c_double),
         ('feedback', ctypes.c_double),
     ]
 
 
+setpoint.value = 1
+
+while (True):
+    rtai.rt_mbx_receive(scope_mbx, ctypes.byref(scope), ctypes.sizeof(scope))
+    time = float(scope.time)
+    control = float(scope.control)
+    feedback = float(scope.feedback)
+
 class RtaiScope(object):
     def __init__(self):
         self.connections = []
-        t = Timer(0.5, self.send_data)
+        self.task = rtai.rt_task_init_schmod(rtai.nam2num("LAT2"), 20, 0, 0, 0, 0XF)
+        self.scope_mbx = rtai.rt_get_adr(rtai.nam2num("MBX3"))
+        self.scope = scope_data_structure()
+        self.setpoint_mbx = rtai.rt_get_adr(rtai.nam2num("MBX4"))
+        self.setpoint = ctypes.c_double()
+        t = Timer(0.5, self.read_rtai)
 
     def new_connection(self, con):
         self.connections.append(con)
@@ -48,14 +61,18 @@ class RtaiScope(object):
 
     def handle_request(self, con, msg):
         logger.log("Received: " + repr(msg))
+        if msg['type'] == 'setpoint':
+            self.rtai_setpoint(msg['message'])
 
-    def send_data(self):
-        task = rtai.rt_task_init_schmod(rtai.nam2num("LAT2"), 20, 0, 0, 0, 0XF)
-        mbx_scope = rtai.rt_get_adr(rtai.nam2num("MBX3"))
-        scope = scope_data_structure()
+    def rtai_setpoint(self, setpoint):
+        if setpoint.value == setpoint:
+            return
+        setpoint.valuea = setpoint
+        rtai.rt_mbx_send(self.setpoint_mbx, ctypes.byref(setpoint), ctypes.sizeof(setpoint))
 
+    def read_rtai(self):
         while True:
-            rtai.rt_mbx_receive(mbx_scope, ctypes.byref(scope), ctypes.sizeof(scope))
+            rtai.rt_mbx_receive(scope_mbx, ctypes.byref(scope), ctypes.sizeof(scope))
             time = float(scope.time)
             control = float(scope.control)
             feedback = float(scope.feedback)
