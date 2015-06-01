@@ -1,2 +1,5 @@
 /generate/
 /controller
+*.pyc
+/ve/
+*.swp

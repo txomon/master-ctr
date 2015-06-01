@@ -32,6 +32,7 @@ class RtaiScope(object):
         self.scope = scope_data_structure()
         self.setpoint_mbx = rtai.rt_get_adr(rtai.nam2num("MBX4"))
         self.setpoint = ctypes.c_double()
+	self.counter = 0
 
     def rtai_setpoint(self, setpoint):
         if self.setpoint.value == setpoint:
@@ -51,7 +52,9 @@ class RtaiScope(object):
             "setpoint": setpoint,
             "feedback": feedback,
         }
-        print('{"type": "scope", "message":' + json.dumps(data) + '}')
+	self.counter +=1
+	if not self.counter % 100:
+            print('{"type": "scope", "message":' + json.dumps(data) + '}')
 
 class StreamingInput(object):
     def __init__(self):
