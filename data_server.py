@@ -5,6 +5,9 @@ import threading
 from collections import deque
 import subprocess
 import time
+import fcntl
+import os
+import sys
 
 import cherrypy
 from ws4py.server.cherrypyserver import WebSocketPlugin, WebSocketTool
@@ -27,7 +30,7 @@ class Server(object):
     def __init__(self):
         self.connections = []
         self.scope = subprocess.Popen(['./scope.py'], stdin=subprocess.PIPE, stdout=subprocess.PIPE) 
-        threading.Timer(0,self.send_data, [threading.currentThread()]).start()
+        threading.Timer(0,self.send_data).start()
 
     def new_connection(self, con):
         self.connections.append(con)
@@ -38,12 +41,18 @@ class Server(object):
     def handle_request(self, con, msg):
         logger.log("Received: " + repr(msg))
 
-    def send_data(self, master_thread):
+    def send_data(self):
         time.sleep(1)
+        fd = self.scope.stdout.fileno()
+        fl = fcntl.fcntl(fd, fcntl.F_GETFL)
+        fcntl.fcntl(fd, fcntl.F_SETFL, fl | os.O_NONBLOCK)
         while threading.active_count() > 3:
-            data = self.scope.stdout.readline()
-            for con in self.connections:
-                con.send(data)
+            if self.connections:
+                try:
+                    data = self.scope.stdout.readline()
+                except: continue
+                for con in self.connections:
+                    con.send(data)
         self.scope.kill()
         self.scope.terminate()
 
@@ -72,6 +81,8 @@ class WebSocketHandler(WebSocket):
         app.handle_request(self, request)
 
     def send(self, payload, binary=False):
+        if self.terminated:
+            return
         logger.debug("Sending: " + str(payload))
         super(WebSocketHandler, self).send(payload, binary)
 
