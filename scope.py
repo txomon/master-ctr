@@ -6,7 +6,6 @@ import select
 sys.path.append('/usr/realtime/rtai-py/')
 import rtai
 import ctypes
-import time
 import logging
 
 try:
@@ -16,6 +15,7 @@ except ImportError:
 
 logging.basicConfig(format=logging.BASIC_FORMAT, level=logging.DEBUG)
 logger = logging.getLogger()
+
 
 class scope_data_structure(ctypes.Structure):
     _fields_ = [
@@ -32,29 +32,32 @@ class RtaiScope(object):
         self.scope = scope_data_structure()
         self.setpoint_mbx = rtai.rt_get_adr(rtai.nam2num("MBX4"))
         self.setpoint = ctypes.c_double()
-	self.counter = 0
+        self.counter = 0
 
     def rtai_setpoint(self, setpoint):
         if self.setpoint.value == setpoint:
             return
         logger.debug('Changing setpoint')
         self.setpoint.value = setpoint
-        rtai.rt_mbx_send(self.setpoint_mbx, ctypes.byref(self.setpoint), ctypes.sizeof(self.setpoint))
+        rtai.rt_mbx_send(self.setpoint_mbx, ctypes.byref(self.setpoint),
+                         ctypes.sizeof(self.setpoint))
 
     def read_rtai(self):
-        rtai.rt_mbx_receive(self.scope_mbx, ctypes.byref(self.scope), ctypes.sizeof(self.scope))
+        rtai.rt_mbx_receive(self.scope_mbx, ctypes.byref(self.scope),
+                            ctypes.sizeof(self.scope))
         time = float(self.scope.time)
         setpoint = float(self.scope.setpoint)
-	self.setpoint.value = setpoint
+        self.setpoint.value = setpoint
         feedback = float(self.scope.feedback)
         data = {
             "time": time,
             "setpoint": setpoint,
             "feedback": feedback,
         }
-	self.counter +=1
-	if not self.counter % 100:
+        self.counter += 1
+        if not self.counter % 100:
             print('{"type": "scope", "message":' + json.dumps(data) + '}')
+
 
 class StreamingInput(object):
     def __init__(self):
@@ -65,7 +68,7 @@ class StreamingInput(object):
         poll_res = self.poller.poll(0)
         if not poll_res:
             return False
-        logger.debug("Received: "+ repr(poll_res))
+        logger.debug("Received: " + repr(poll_res))
         return poll_res[0][1]
 
     def read(self):
@@ -76,12 +79,13 @@ class StreamingInput(object):
             raise ValueError()
         return None
 
+
 if __name__ == '__main__':
     app = RtaiScope()
     stdin = StreamingInput()
     while True:
         app.read_rtai()
-	try:
+        try:
             line = stdin.read()
         except ValueError:
             sys.exit(0)
@@ -89,7 +93,7 @@ if __name__ == '__main__':
             continue
 
         msg = json.dumps(line.strip())
-	if type(msg) in [str, unicode]:
+        if type(msg) in [str, unicode]:
             logger.debug("Input string: " + repr(msg))
             msg = {'type': 'setpoint', 'message': float(line)}
         else:

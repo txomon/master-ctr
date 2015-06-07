@@ -26,8 +26,10 @@ logger = logging.getLogger()
 class Server(object):
     def __init__(self):
         self.connections = []
-        self.scope = subprocess.Popen(['./scope.py'], stdin=subprocess.PIPE, stdout=subprocess.PIPE) 
-        threading.Timer(0,self.send_data, [threading.currentThread()]).start()
+        self.scope = subprocess.Popen(['python2', 'fake_scope.py'],
+                                      stdin=subprocess.PIPE,
+                                      stdout=subprocess.PIPE)
+        threading.Timer(0, self.send_data, [threading.currentThread()]).start()
 
     def new_connection(self, con):
         self.connections.append(con)

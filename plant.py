@@ -14,6 +14,7 @@ class scope_data_structure(ctypes.Structure):
         ('feedback', ctypes.c_double),
     ]
 
+
 task = rtai.rt_task_init_schmod(rtai.nam2num("LAT1"), 20, 0, 0, 0, 0XF)
 rtai.rt_make_soft_real_time()
 controller_output_mbx = rtai.rt_get_adr(rtai.nam2num("MBX1"))
